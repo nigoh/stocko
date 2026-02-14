@@ -33,6 +33,17 @@
 - 例: 締め日25日、基準日2025-04-10の場合、期間は2025-03-26〜2025-04-25。
 - 月末超過（29〜31日）時は当該月の末日を締め日として補正する。
 
+### 予算使用率と超過見込みの判定ロジック
+- `BudgetUsageCalculator`を追加し、総額・カテゴリ別の`usage_rate = actual_expense / budget_amount`を算出する。
+- 返却値は `actual_expense`, `budget_amount`, `usage_rate`, `forecast_expense`, `is_over_budget_forecast` を持つ。
+- `forecast_expense` は「当月日次平均支出 × 期間日数」で算出し、`forecast_expense > budget_amount` を超過見込み判定とする。
+- UIの強調表示は `is_over_budget_forecast = true` を唯一の判定条件として統一する。
+
+### 締め日前後の集計境界ルール
+- 予算集計の対象は `occurred_on >= period_start AND occurred_on <= period_end`（両端含む）で固定する。
+- 例: 締め日25日の場合、4/25支出は当月、4/26支出は翌月へ計上する。
+- タイムゾーンは `Asia/Tokyo` 固定で日付丸めを行い、UTC日跨ぎによる二重計上/未計上を防ぐ。
+
 ## OCR暫定値と確定データ
 - `expense_ocr_drafts`
   - `id`, `receipt_image_url`, `status`(queued/processing/completed/failed), `ocr_raw_payload`, `extracted_amount`, `extracted_date`, `extracted_store_name`, `extracted_category_candidates`(json), `selected_category_id`, `confidence`, `failure_reason`, `created_at`, `updated_at`。
@@ -69,6 +80,7 @@ erDiagram
     categories ||--o{ purchase_histories : "category_id"
 
     budgets ||--o{ budget_category_limits : "budget_id"
+    budgets ||--o{ budget_usage_snapshots : "budget_id"
     expense_ocr_drafts ||--o{ expenses : "ocr_draft_id"
     expense_ocr_drafts ||--o{ expense_ocr_draft_edits : "ocr_draft_id"
 
@@ -148,6 +160,18 @@ erDiagram
       uuid category_id FK
       decimal limit_amount
       decimal alert_threshold
+    }
+
+    budget_usage_snapshots {
+      uuid id PK
+      uuid budget_id FK
+      uuid category_id FK
+      decimal actual_expense
+      decimal budget_amount
+      decimal usage_rate
+      decimal forecast_expense
+      bool is_over_budget_forecast
+      datetime calculated_at
     }
 
     monthly_summaries {
