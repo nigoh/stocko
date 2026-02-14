@@ -46,9 +46,23 @@
 
 ## OCR暫定値と確定データ
 - `expense_ocr_drafts`
-  - `id`, `receipt_image_url`, `ocr_raw_payload`, `extracted_amount`, `extracted_date`, `extracted_store_name`, `extracted_category_id`, `confidence`, `created_at`。
+  - `id`, `receipt_image_url`, `status`(queued/processing/completed/failed), `ocr_raw_payload`, `extracted_amount`, `extracted_date`, `extracted_store_name`, `extracted_category_candidates`(json), `selected_category_id`, `confidence`, `failure_reason`, `created_at`, `updated_at`。
+- `expense_ocr_draft_edits`
+  - `id`, `ocr_draft_id`, `field_name`, `before_value`, `after_value`, `edited_by`, `edited_at`。
 - `expenses.status`で`draft`/`confirmed`を区別し、確定時に`expense_ocr_drafts.id`を参照履歴として保持する（`ocr_draft_id`）。
 - 確定操作前は暫定値を編集可能、確定後は通常の支出データとして集計対象にする。
+- `expense_ocr_drafts.confidence` が閾値未満（例: `< 0.70`）または `status=failed` の場合、`source_type=manual` での確定を推奨する。
+
+## OCR入力から月次集計への反映ルール
+1. OCR成功時
+   - `expense_ocr_drafts(status=completed)` を作成後、ユーザー編集値で `expenses(status=confirmed)` を作成する。
+2. OCR失敗時
+   - `expense_ocr_drafts(status=failed)` と `failure_reason` を保存し、手入力で `expenses(source_type=manual)` を作成する。
+3. 低信頼時
+   - フォーム反映は許可するが、確定前にユーザー確認を必須化する。
+4. 集計時
+   - `expenses.status=confirmed` のみを `monthly_summaries.total_expense` に加算する。
+   - `source_type` の違いで計算式は分岐しない（OCR/手入力を同一基準で集計）。
 
 ## 在庫推定のための購入履歴
 - `purchase_histories`
@@ -68,6 +82,7 @@ erDiagram
     budgets ||--o{ budget_category_limits : "budget_id"
     budgets ||--o{ budget_usage_snapshots : "budget_id"
     expense_ocr_drafts ||--o{ expenses : "ocr_draft_id"
+    expense_ocr_drafts ||--o{ expense_ocr_draft_edits : "ocr_draft_id"
 
     categories {
       uuid id PK
@@ -105,13 +120,27 @@ erDiagram
     expense_ocr_drafts {
       uuid id PK
       string receipt_image_url
+      enum status
       json ocr_raw_payload
       decimal extracted_amount
       date extracted_date
       string extracted_store_name
-      uuid extracted_category_id
+      json extracted_category_candidates
+      uuid selected_category_id
       decimal confidence
+      string failure_reason
       datetime created_at
+      datetime updated_at
+    }
+
+    expense_ocr_draft_edits {
+      uuid id PK
+      uuid ocr_draft_id FK
+      string field_name
+      string before_value
+      string after_value
+      string edited_by
+      datetime edited_at
     }
 
     budgets {
