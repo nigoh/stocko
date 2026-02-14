@@ -73,7 +73,7 @@
      - `incomes`
        - `id`, `occurred_on`, `amount`, `category_id`, `memo`, `created_at`, `updated_at`。
      - `expenses`
-       - `id`, `occurred_on`, `amount`, `category_id`, `store_name`, `memo`, `source_type`(manual/ocr), `status`(draft/confirmed), `created_at`, `updated_at`。
+       - `id`, `occurred_on`, `amount`, `category_id`, `store_name`, `memo`, `source_type`(manual/ocr), `status`(draft/confirmed), `ocr_draft_id`, `created_at`, `updated_at`。
      - `budgets`
        - `id`, `period_start`, `period_end`, `closing_day`, `total_budget_amount`, `carry_over_mode`, `created_at`, `updated_at`。
      - `budget_category_limits`
@@ -100,6 +100,118 @@
        - `id`, `item_name`, `category_id`, `last_purchased_on`, `purchase_count`, `purchase_frequency_days`, `average_consumption_interval_days`, `last_amount`, `updated_at`。
      - `shopping_candidates`生成時に、`last_purchased_on`と`average_consumption_interval_days`から枯渇予測日を算出する。
      - 学習初期（履歴不足）向けに`confidence`低下ルールを持たせる。
+   - 1-6. mermaid.jsでER図を定義し、実装時の共通参照にする。
+
+```mermaid
+erDiagram
+    categories ||--o{ incomes : "category_id"
+    categories ||--o{ expenses : "category_id"
+    categories ||--o{ budget_category_limits : "category_id"
+    categories ||--o{ shopping_candidates : "category_id"
+    categories ||--o{ purchase_histories : "category_id"
+
+    budgets ||--o{ budget_category_limits : "budget_id"
+    expense_ocr_drafts ||--o{ expenses : "ocr_draft_id"
+
+    categories {
+      uuid id PK
+      string name
+      enum type
+      bool is_active
+      datetime created_at
+      datetime updated_at
+    }
+
+    incomes {
+      uuid id PK
+      date occurred_on
+      decimal amount
+      uuid category_id FK
+      string memo
+      datetime created_at
+      datetime updated_at
+    }
+
+    expenses {
+      uuid id PK
+      date occurred_on
+      decimal amount
+      uuid category_id FK
+      string store_name
+      string memo
+      enum source_type
+      enum status
+      uuid ocr_draft_id FK
+      datetime created_at
+      datetime updated_at
+    }
+
+    expense_ocr_drafts {
+      uuid id PK
+      string receipt_image_url
+      json ocr_raw_payload
+      decimal extracted_amount
+      date extracted_date
+      string extracted_store_name
+      uuid extracted_category_id
+      decimal confidence
+      datetime created_at
+    }
+
+    budgets {
+      uuid id PK
+      date period_start
+      date period_end
+      int closing_day
+      decimal total_budget_amount
+      string carry_over_mode
+      datetime created_at
+      datetime updated_at
+    }
+
+    budget_category_limits {
+      uuid id PK
+      uuid budget_id FK
+      uuid category_id FK
+      decimal limit_amount
+      decimal alert_threshold
+    }
+
+    monthly_summaries {
+      uuid id PK
+      date period_start
+      date period_end
+      decimal total_income
+      decimal total_expense
+      decimal net_amount
+      decimal ending_balance
+      datetime generated_at
+    }
+
+    purchase_histories {
+      uuid id PK
+      string item_name
+      uuid category_id FK
+      date last_purchased_on
+      int purchase_count
+      int purchase_frequency_days
+      int average_consumption_interval_days
+      decimal last_amount
+      datetime updated_at
+    }
+
+    shopping_candidates {
+      uuid id PK
+      string item_name
+      uuid category_id FK
+      enum reason_type
+      decimal confidence
+      enum status
+      datetime suggested_at
+      datetime confirmed_at
+    }
+```
+
 2. 家計管理機能
    - 収入/支出の登録・編集・削除とカテゴリ管理を実装する。
    - 残高の自動算出ロジックを実装する。
