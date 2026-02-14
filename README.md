@@ -8,6 +8,7 @@
 - SSD環境の土台: `docs/ssd/README.md`
 - 仕様テンプレート: `docs/ssd/spec-template.md`
 - タスクテンプレート: `docs/ssd/task-template.md`
+- 月次レポート実装仕様: `docs/ssd/monthly-report-implementation-solo-life-support-v1.md`
 - Skills活用ベストプラクティス: `docs/ssd/skills-best-practices.md`
 - PRテンプレート: `.github/pull_request_template.md`
 
