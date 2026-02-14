@@ -20,7 +20,7 @@ function saveEntries(entries) {
 }
 
 function calcBalance(entries) {
-  return entries.reduce((sum, e) => e.type === "income" ? sum + e.amount : sum - e.amount, 0);
+  return entries.reduce((sum, e) => (e.type === "income" ? sum + e.amount : sum - e.amount), 0);
 }
 
 function renderBalance(entries) {
@@ -29,29 +29,61 @@ function renderBalance(entries) {
   el.textContent = `¥${calcBalance(entries).toLocaleString()}`;
 }
 
+function createCell(text) {
+  const td = document.createElement("td");
+  td.textContent = text;
+  return td;
+}
+
 function renderTable(entries, onEdit, onDelete) {
   const body = document.querySelector("#entryRows");
   const empty = document.querySelector("#emptyState");
   if (!body) return;
+
   body.innerHTML = "";
   if (entries.length === 0) {
     if (empty) empty.style.display = "block";
     return;
   }
+
   if (empty) empty.style.display = "none";
+
   for (const entry of entries) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${entry.date}</td>
-      <td>${entry.type === "income" ? "収入" : "支出"}</td>
-      <td>${entry.category}</td>
-      <td>${entry.title}</td>
-      <td class="${entry.type === "income" ? "income" : "expense"}">${entry.type === "income" ? "+" : "-"}¥${entry.amount.toLocaleString()}</td>
-      <td><div class="actions"><button data-edit="${entry.id}">編集</button><button data-delete="${entry.id}">削除</button></div></td>`;
+
+    tr.appendChild(createCell(entry.date));
+    tr.appendChild(createCell(entry.type === "income" ? "収入" : "支出"));
+    tr.appendChild(createCell(String(entry.category ?? "")));
+    tr.appendChild(createCell(String(entry.title ?? "")));
+
+    const amountTd = document.createElement("td");
+    amountTd.className = entry.type === "income" ? "income" : "expense";
+    amountTd.textContent = `${entry.type === "income" ? "+" : "-"}¥${Number(entry.amount).toLocaleString()}`;
+    tr.appendChild(amountTd);
+
+    const actionTd = document.createElement("td");
+    const actions = document.createElement("div");
+    actions.className = "actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = "編集";
+    editBtn.dataset.edit = entry.id;
+    editBtn.onclick = () => onEdit(entry.id);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "削除";
+    deleteBtn.dataset.delete = entry.id;
+    deleteBtn.onclick = () => onDelete(entry.id);
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+    actionTd.appendChild(actions);
+    tr.appendChild(actionTd);
+
     body.appendChild(tr);
   }
-  body.querySelectorAll("button[data-edit]").forEach((btn) => btn.onclick = () => onEdit(btn.dataset.edit));
-  body.querySelectorAll("button[data-delete]").forEach((btn) => btn.onclick = () => onDelete(btn.dataset.delete));
 }
 
 function populateCategory(select) {
@@ -64,7 +96,7 @@ function populateCategory(select) {
 }
 
 function init() {
-  let entries = loadEntries().sort((a,b)=>b.date.localeCompare(a.date));
+  let entries = loadEntries().sort((a, b) => b.date.localeCompare(a.date));
   const form = document.querySelector("#entryForm");
   const categorySelect = document.querySelector("#category");
   const cancelBtn = document.querySelector("#cancelEdit");
@@ -73,7 +105,7 @@ function init() {
   if (categorySelect && categorySelect.options.length === 0) populateCategory(categorySelect);
 
   const refresh = () => {
-    entries = entries.sort((a,b)=>b.date.localeCompare(a.date));
+    entries = entries.sort((a, b) => b.date.localeCompare(a.date));
     saveEntries(entries);
     renderBalance(entries);
     renderTable(entries, handleEdit, handleDelete);
@@ -123,7 +155,7 @@ function init() {
         note: data.get("note")
       };
       if (!newEntry.title || newEntry.amount <= 0 || Number.isNaN(newEntry.amount)) return;
-      if (editingId.value) entries = entries.map((e) => e.id === editingId.value ? newEntry : e);
+      if (editingId.value) entries = entries.map((e) => (e.id === editingId.value ? newEntry : e));
       else entries.unshift(newEntry);
       resetForm();
       refresh();
