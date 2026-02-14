@@ -20,7 +20,11 @@
 - `monthly_summaries`
   - `id`, `period_start`, `period_end`, `total_income`, `total_expense`, `net_amount`, `ending_balance`, `generated_at`。
 - `shopping_candidates`
-  - `id`, `item_name`, `category_id`, `reason_type`(inventory_prediction/manual), `confidence`, `status`(suggested/confirmed/dismissed), `suggested_at`, `confirmed_at`。
+  - `id`, `item_name`, `category_id`, `candidate_bucket`(routine/out_of_stock/budget_fit), `reason_type`(inventory_prediction/routine/budget/manual), `estimated_amount`, `confidence`, `status`(suggested/edited/confirmed/dismissed), `suggested_at`, `confirmed_at`。
+- `shopping_list_sessions`
+  - `id`, `budget_id`, `session_name`, `remaining_budget_snapshot`, `candidate_total_amount`, `balance_delta_amount`, `data_quality`(enough/limited), `status`(draft/confirmed), `confirmed_at`, `created_at`, `updated_at`。
+- `shopping_list_items`
+  - `id`, `session_id`, `shopping_candidate_id`, `item_name`, `quantity`, `unit_price`, `line_amount`, `is_user_edited`, `display_last_purchased_on`, `display_consumption_interval_days`, `note`。
 
 ## ドメインロジック定義
 ### 残高計算式を単一責務で扱う
@@ -69,6 +73,25 @@
   - `id`, `item_name`, `category_id`, `last_purchased_on`, `purchase_count`, `purchase_frequency_days`, `average_consumption_interval_days`, `last_amount`, `updated_at`。
 - `shopping_candidates`生成時に、`last_purchased_on`と`average_consumption_interval_days`から枯渇予測日を算出する。
 - 学習初期（履歴不足）向けに`confidence`低下ルールを持たせる。
+- 履歴3件未満の品目は`data_quality=limited`としてセッションへ伝播し、UIで手動編集前提の注意表示を必須化する。
+
+
+
+## 買い物リストMVPルール
+### 候補生成の3区分
+- `candidate_bucket=routine`: 定期購入フラグまたは周期が安定した品目を抽出。
+- `candidate_bucket=out_of_stock`: 枯渇予測日が当日以前の品目を抽出。
+- `candidate_bucket=budget_fit`: 予算残に対して追加可能な候補を抽出。
+
+### 推定根拠の表示
+- `shopping_list_items.display_last_purchased_on` に最終購入日を保持する。
+- `shopping_list_items.display_consumption_interval_days` に推定消費間隔を保持する。
+- 推定根拠は確定後も監査できるよう、表示値スナップショットとして保存する。
+
+### 予算整合チェック
+- `candidate_total_amount = SUM(shopping_list_items.line_amount)` をセッション単位で計算する。
+- `balance_delta_amount = remaining_budget_snapshot - candidate_total_amount` を保持する。
+- `balance_delta_amount < 0` の場合は確定前エラー、`>=0` の場合は確定可能とする。
 
 ## ER図（mermaid.js）
 ```mermaid
@@ -80,6 +103,10 @@ erDiagram
     categories ||--o{ purchase_histories : "category_id"
 
     budgets ||--o{ budget_category_limits : "budget_id"
+    budgets ||--o{ shopping_list_sessions : "budget_id"
+    expense_ocr_drafts ||--o{ expenses : "ocr_draft_id"
+    shopping_list_sessions ||--o{ shopping_list_items : "session_id"
+    shopping_candidates ||--o{ shopping_list_items : "shopping_candidate_id"
     budgets ||--o{ budget_usage_snapshots : "budget_id"
     expense_ocr_drafts ||--o{ expenses : "ocr_draft_id"
     expense_ocr_drafts ||--o{ expense_ocr_draft_edits : "ocr_draft_id"
@@ -201,10 +228,40 @@ erDiagram
       uuid id PK
       string item_name
       uuid category_id FK
+      enum candidate_bucket
       enum reason_type
+      decimal estimated_amount
       decimal confidence
       enum status
       datetime suggested_at
       datetime confirmed_at
+    }
+
+    shopping_list_sessions {
+      uuid id PK
+      uuid budget_id FK
+      string session_name
+      decimal remaining_budget_snapshot
+      decimal candidate_total_amount
+      decimal balance_delta_amount
+      enum data_quality
+      enum status
+      datetime confirmed_at
+      datetime created_at
+      datetime updated_at
+    }
+
+    shopping_list_items {
+      uuid id PK
+      uuid session_id FK
+      uuid shopping_candidate_id FK
+      string item_name
+      int quantity
+      decimal unit_price
+      decimal line_amount
+      bool is_user_edited
+      date display_last_purchased_on
+      int display_consumption_interval_days
+      string note
     }
 ```

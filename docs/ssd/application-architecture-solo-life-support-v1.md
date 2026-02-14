@@ -40,6 +40,8 @@ upload -> queued -> processing
 threshold判定]
     API --> Inv[在庫推定ロジック
 購入履歴ベース]
+    API --> SL[ShoppingListComposer
+3区分候補生成/整合チェック]
 
     OCRFlow --> OCR[OCR Provider]
     OCRFlow --> OCRJudge
@@ -55,6 +57,7 @@ threshold判定]
     DB --> T2b[budget_usage_snapshots]
     DB --> T3[expense_ocr_drafts / monthly_summaries]
     DB --> T4[purchase_histories / shopping_candidates]
+    DB --> T5[shopping_list_sessions / shopping_list_items]
 ```
 
 ## 実装責務マップ
@@ -71,6 +74,11 @@ threshold判定]
    - OCR失敗時・低信頼時は `expenses` へ自動計上せず、ユーザー手入力を必須化する。
 6. バッチ/集計
    - 月次集計更新と買い物候補更新を定期実行またはイベント駆動で実装する。
+7. 買い物リスト生成ユースケース
+   - `ShoppingListComposer` で候補を「定期購入品 / 在庫切れ推定品 / 予算内候補」に分類して返す。
+   - 各候補には `last_purchased_on` と `estimated_interval_days` を付与する。
+   - `data_quality=limited` の場合はUI向けに「推定精度低下」フラグを返し、手動編集導線を有効化する。
+   - 確定前に `remaining_budget - candidate_total_amount` を計算し、超過時は確定不可レスポンスを返す。
 
 ## 予算管理MVPの処理フロー（Sprint 2）
 ```mermaid
@@ -124,3 +132,17 @@ sequenceDiagram
 - `docs/ssd/task-solo-life-support-v1.md`
 - `docs/ssd/data-model-solo-life-support-v1.md`
 - `docs/ssd/pre-implementation-decisions-solo-life-support-v1.md`
+
+## 買い物リストAPI（MVP）
+### `POST /api/shopping-list/sessions/generate`
+- 入力: `target_date`, `budget_id`（任意）。
+- 出力: 3区分候補、推定根拠、`data_quality`、`remaining_budget_snapshot`。
+
+### `PATCH /api/shopping-list/sessions/:id/items`
+- 入力: 追加/削除/数量変更/価格変更/メモ変更。
+- 出力: 更新後の候補一覧、`candidate_total_amount`、`balance_delta_amount`。
+
+### `POST /api/shopping-list/sessions/:id/confirm`
+- 入力: なし（最新編集内容を確定）。
+- 処理: 予算整合チェックを再実行し、問題なければ `status=confirmed` で保存。
+- エラー: `BUDGET_OVERFLOW`（候補合計が予算残を超過）。
