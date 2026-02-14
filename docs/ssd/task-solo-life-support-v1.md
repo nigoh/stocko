@@ -19,8 +19,9 @@
 ### Sprint 1（基盤・家計管理）
 1. Webアプリ基盤構築
    - 画面遷移、永続化、共通UIレイアウトを実装する。
-2. データモデル定義
+2. 設計ドキュメント整備
    - データモデル定義は `docs/ssd/data-model-solo-life-support-v1.md` に分離して管理する。
+   - アプリケーション構成は `docs/ssd/application-architecture-solo-life-support-v1.md` に図解付きで管理する。
    - 本タスクでは以下を実装完了条件として扱う。
      - 収入・支出・カテゴリ・予算・月次集計・買い物候補のスキーマが定義されていること。
      - 残高計算式（前月繰越 + 当月収入 - 当月支出）が単一責務で定義されていること。
@@ -59,6 +60,7 @@
 - `test -f docs/ssd/spec-solo-life-support-v1.md`
 - `test -f docs/ssd/task-solo-life-support-v1.md`
 - `test -f docs/ssd/data-model-solo-life-support-v1.md`
+- `test -f docs/ssd/application-architecture-solo-life-support-v1.md`
 - `git diff --check`
 - `test -f docs/ssd/pre-implementation-decisions-solo-life-support-v1.md`
 
