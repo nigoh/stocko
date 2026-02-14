@@ -45,6 +45,7 @@
    - 予算期間の締め日設定、総額予算、カテゴリ別予算の入力・更新を実装する。
 7. 月次レポート機能
    - 月次集計、カテゴリ内訳、前月比、収支差額、残高推移を表示する。
+   - 実装仕様は `docs/ssd/monthly-report-implementation-solo-life-support-v1.md` に従い、予算比導線・改善アクション・性能計測手順まで含めて実装する。
 
 ## Sprint 2: OCR統合の受け入れチェック
 - [ ] レシート画像アップロード後、OCR処理開始から結果反映までの状態遷移がUIで確認できる。
@@ -80,6 +81,7 @@
 - `test -f docs/ssd/task-solo-life-support-v1.md`
 - `test -f docs/ssd/data-model-solo-life-support-v1.md`
 - `test -f docs/ssd/application-architecture-solo-life-support-v1.md`
+- `test -f docs/ssd/monthly-report-implementation-solo-life-support-v1.md`
 - `git diff --check`
 - `test -f docs/ssd/pre-implementation-decisions-solo-life-support-v1.md`
 
