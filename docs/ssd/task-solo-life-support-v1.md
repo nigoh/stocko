@@ -42,15 +42,16 @@
    - 受け入れ条件に対する動作確認を実施し、結果を記録する。
 
 ## 実装着手前チェックリスト
-- [ ] Web技術スタック（フレームワーク/状態管理/DB）を確定した
-- [ ] OCRプロバイダ候補と費用上限を確定した
-- [ ] AI在庫推定の最小モデル方針（ルール + 軽量推定）を確定した
+- [x] Web技術スタック（フレームワーク/状態管理/DB）を確定した（`pre-implementation-decisions-solo-life-support-v1.md`参照）
+- [x] OCRプロバイダ候補と費用上限を確定した（`pre-implementation-decisions-solo-life-support-v1.md`参照）
+- [x] AI在庫推定の最小モデル方針（ルール + 軽量推定）を確定した（`pre-implementation-decisions-solo-life-support-v1.md`参照）
 - [ ] デモ用の初期データセットを準備した
 
 ## 検証コマンド
 - `test -f docs/ssd/spec-solo-life-support-v1.md`
 - `test -f docs/ssd/task-solo-life-support-v1.md`
 - `git diff --check`
+- `test -f docs/ssd/pre-implementation-decisions-solo-life-support-v1.md`
 
 ## 完了条件
 - [ ] Sprint 1〜3の着手順と成果物が合意済み
