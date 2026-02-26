@@ -28,10 +28,15 @@ python -m http.server 3000
 npx cc-sdd@latest --copilot --lang ja --overwrite force
 ```
 
+Copilot エージェントは、GitHub Copilot Chat から `.github/prompts/` の `/kiro-*` プロンプトを実行して利用します（例: `/kiro-steering` → `/kiro-spec-init`）。
+
 ```bash
 # GitHub MCP Server を使う場合はトークンを設定
 export GITHUB_PERSONAL_ACCESS_TOKEN=YOUR_TOKEN
 ```
+
+- ローカル開発では、上記の環境変数をシェルに設定すれば動作します。
+- リポジトリシークレットは必須ではありません（GitHub Actions で MCP を使う場合のみ、必要に応じて Secrets へ登録してください）。
 
 ## できること（Sprint 1）
 
